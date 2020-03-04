@@ -1,3 +1,4 @@
+uPNG -- altered by @msokalski ( added missing image formats, replaced defective inflate with tinfl.c )
 uPNG -- derived from LodePNG version 20100808
 ==========================================
 

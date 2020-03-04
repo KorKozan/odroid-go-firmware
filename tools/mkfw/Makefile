@@ -2,7 +2,7 @@
 UPNG_DIR = upng
 
 HEADERS = crc32.h $(UPNG_DIR)/upng.h
-SOURCES = main.c crc32.c $(UPNG_DIR)/upng.c
+SOURCES = main.c crc32.c $(UPNG_DIR)/upng.c $(UPNG_DIR)/tinfl.c
 BIN = mkfw
 
 INCLUDES = $(UPNG_DIR)

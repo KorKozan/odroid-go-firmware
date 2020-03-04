@@ -135,7 +135,7 @@ enum partition_subtype_t
 #define RETURN(x) do { result = (x); goto cleanup; } while (false)
 
 // current version
-static const char* kVersion = "1.1.0 (20200304)";
+static const char* kVersion = "1.1.1 (20200304a)";
 
 static const struct option kLongOptions[] = {
 //   NAME       ARGUMENT           FLAG  SHORTNAME
@@ -333,7 +333,7 @@ static return_code_t decodePng(const char* tileFileName, const bool quiet)
             ++rawData;
             *rawData = htole16(colors[(*pngData >> 2) & 0x03]);
             ++rawData;
-            *rawData = htole16(colors[(*pngData >> 6) & 0x03]);
+            *rawData = htole16(colors[(*pngData >> 0) & 0x03]);
             ++rawData;
 
             ++pngData;
@@ -382,76 +382,14 @@ static return_code_t decodePng(const char* tileFileName, const bool quiet)
             ++pngData;
         }
         break;
-    case UPNG_LUMINANCE_ALPHA1: // 1-bit Greyscale w/ 1-bit Alpha
+    case UPNG_LUMINANCE16:      // 16-bit Greyscale
         if (!quiet) {
-            printf("Tile png format is 1-bit grayscale w/ 1-bit alpha\n");
+            printf("Tile png format is 16-bit grayscale\n");
         }
         for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
-            *rawData = htole16(((*pngData >> 6) & 0x03) == 0x03 ? 0xFFFF : 0x0000);
-            ++rawData;
-            *rawData = htole16(((*pngData >> 4) & 0x03) == 0x03 ? 0xFFFF : 0x0000);
-            ++rawData;
-            *rawData = htole16(((*pngData >> 2) & 0x03) == 0x03 ? 0xFFFF : 0x0000);
-            ++rawData;
-            *rawData = htole16(((*pngData >> 0) & 0x03) == 0x03 ? 0xFFFF : 0x0000);
-            ++rawData;
-
-            ++pngData;
-        }
-        break;
-    case UPNG_LUMINANCE_ALPHA2: // 2-bit Greyscale w/ 2-bit Alpha
-        if (!quiet) {
-            printf("Tile png format is 2-bit grayscale w/ 2-bit alpha\n");
-        }
-        for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
-            static const uint16_t colors[10] = {
-                0x0000, RGB565(3, 7, 3), RGB565(7, 14, 17), RGB565(10, 21, 10), RGB565(14, 28, 14),
-                0, RGB565(21, 43, 21), 0, 0, 0xFFFF
-            };
-
-            {
-                const uint8_t v = (*pngData >> 6) & 0x03;
-                const uint8_t a = (*pngData >> 4) & 0x03;
-                *rawData = htole16(colors[v * a]);
-                ++rawData;
-            }
-            {
-                const uint8_t v = (*pngData >> 2) & 0x03;
-                const uint8_t a = (*pngData >> 0) & 0x03;
-                *rawData = htole16(colors[v * a]);
-                ++rawData;
-            }
-
-            ++pngData;
-        }
-        break;
-    case UPNG_LUMINANCE_ALPHA4: // 4-bit Greyscale w/ 4-bit Alpha
-        if (!quiet) {
-            printf("Tile png format is 4-bit grayscale w/ 4-bit alpha\n");
-        }
-        for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
-            const uint8_t v = (*pngData >> 4) & 0x07;
-            const uint8_t a = (*pngData >> 0) & 0x07;
-            const uint8_t c = ((v * a) << 1) / 0x07;
-            const uint8_t r = c | (c >> 4);
-            const uint8_t g = (r << 1) | (r >> 4);
-            const uint8_t b = r;
-            const uint16_t hrgb565 = RGB565(r, g, b);
-            *rawData = htole16(hrgb565);
-
-            ++rawData;
-            ++pngData;
-        }
-        break;
-    case UPNG_LUMINANCE_ALPHA8: // 8-bit Greyscale w/ 8-bit Alpha
-        if (!quiet) {
-            printf("Tile png format is 8-bit grayscale w/ 8-bit alpha\n");
-        }
-        for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
-            const uint8_t v = pngData[0];
-            const uint8_t a = pngData[1];
-            const uint8_t c = (v * a / 0xff) >> 3;
-            const uint8_t r = c | (c >> 7);
+            const uint16_t* pngData16 = (uint16_t*)pngData;
+            const uint8_t v = (*pngData16 >> 12) & 0x0F;
+            const uint8_t r = (v << 1) | (v >> 3);
             const uint8_t g = (r << 1) | (r >> 4);
             const uint8_t b = r;
             const uint16_t hrgb565 = RGB565(r, g, b);
@@ -461,6 +399,137 @@ static return_code_t decodePng(const char* tileFileName, const bool quiet)
             pngData += 2;
         }
         break;
+    case UPNG_LUMINANCE_ALPHA8: // 8-bit Greyscale w/ 8-bit Alpha
+        if (!quiet) {
+            printf("Tile png format is 8-bit grayscale w/ 8-bit alpha\n");
+        }
+        for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
+            const uint8_t v = pngData[0];
+            const uint8_t a = pngData[1];
+            const uint8_t c = ((v * a / 0xff) >> 4) & 0x0F;
+            const uint8_t r = (c << 1) | (c >> 3);
+            const uint8_t g = (r << 1) | (r >> 4);
+            const uint8_t b = r;
+            const uint16_t hrgb565 = RGB565(r, g, b);
+            *rawData = htole16(hrgb565);
+
+            ++rawData;
+            pngData += 2;
+        }
+        break;
+	case UPNG_LUMINANCE_ALPHA16: // 16-bit Grayscale w/ 16-bit Alpha
+        if (!quiet) {
+            printf("Tile png format is 16-bit grayscale w/ 16-bit alpha\n");
+        }
+        for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
+            const uint16_t* pngData16 = (uint16_t*)pngData;
+            const uint16_t v = pngData16[0];
+            const uint16_t a = pngData16[1];
+            const uint8_t c = ((v * a / 0xffff) >> 12) & 0x0F;
+            const uint8_t r = (c << 1) | (c >> 3);
+            const uint8_t g = (r << 1) | (r >> 4);
+            const uint8_t b = r;
+            const uint16_t hrgb565 = RGB565(r, g, b);
+            *rawData = htole16(hrgb565);
+
+            ++rawData;
+            pngData += 4;
+        }
+        break;
+	case UPNG_INDEX1_RGB:       // 1-bit RGB palette
+	case UPNG_INDEX2_RGB:       // 2-bit RGB palette
+	case UPNG_INDEX4_RGB:       // 4-bit RGB palette
+	case UPNG_INDEX8_RGB:       // 8-bit RGB palette
+	case UPNG_INDEX1_RGBA:      // 1-bit RGBA palette
+	case UPNG_INDEX2_RGBA:      // 2-bit RGBA palette
+	case UPNG_INDEX4_RGBA:      // 4-bit RGBA palette
+	case UPNG_INDEX8_RGBA:      // 8-bit RGBA palette
+	{
+        static uint16_t palette[256];
+        memset(palette, 0, sizeof (palette));
+
+        const unsigned palSize = upng_get_pal_size(upng);
+        const bool hasAlpha = ((fmt == UPNG_INDEX1_RGBA) || (fmt == UPNG_INDEX2_RGBA) || (fmt == UPNG_INDEX4_RGBA) || (fmt == UPNG_INDEX8_RGBA));
+        const unsigned bpp = upng_get_bpp(upng);
+
+        if (!quiet) {
+            printf("Tile png format is %d-bit RGB%s palette\n", bpp, (hasAlpha ? "A" : ""));
+        }
+
+        const unsigned bytesPerPixel = hasAlpha ? 4 : 3;
+        const uint8_t* pngPalette = upng_get_pal_buffer(upng);
+        uint16_t* currentColor = palette;
+        for (unsigned i = 0; i < palSize; ++i) {
+            const uint8_t a = hasAlpha ? pngPalette[3] : 0xFF;
+            const uint8_t r = (pngPalette[0] * a / 0xFF) >> 3;
+                  uint8_t g = ((pngPalette[1] * a / 0xFF) >> 3) << 1;
+                          g |= g >> 5;
+            const uint8_t b = (pngPalette[2] * a / 0xFF) >> 3;
+            const uint16_t rgb565 = RGB565(r, g, b);
+            *currentColor = htole16(rgb565);
+
+            ++currentColor;
+            pngPalette += bytesPerPixel;
+        }
+
+        switch (bpp) {
+        case 1:
+            for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
+                *rawData = palette[(*pngData >> 7) & 0x01];
+                ++rawData;
+                *rawData = palette[(*pngData >> 6) & 0x01];
+                ++rawData;
+                *rawData = palette[(*pngData >> 5) & 0x01];
+                ++rawData;
+                *rawData = palette[(*pngData >> 4) & 0x01];
+                ++rawData;
+                *rawData = palette[(*pngData >> 3) & 0x01];
+                ++rawData;
+                *rawData = palette[(*pngData >> 2) & 0x01];
+                ++rawData;
+                *rawData = palette[(*pngData >> 1) & 0x01];
+                ++rawData;
+                *rawData = palette[(*pngData >> 0) & 0x01];
+                ++rawData;
+
+                ++pngData;
+            }
+            break;
+        case 2:
+            for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
+                *rawData = palette[(*pngData >> 6) & 0x03];
+                ++rawData;
+                *rawData = palette[(*pngData >> 4) & 0x03];
+                ++rawData;
+                *rawData = palette[(*pngData >> 2) & 0x03];
+                ++rawData;
+                *rawData = palette[(*pngData >> 0) & 0x03];
+                ++rawData;
+
+                ++pngData;
+            }
+            break;
+        case 4:
+            for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
+                *rawData = palette[(*pngData >> 4) & 0x0F];
+                ++rawData;
+                *rawData = palette[(*pngData >> 0) & 0x0F];
+                ++rawData;
+
+                ++pngData;
+            }
+            break;
+        case 8:
+            for (uint16_t* rawData = (uint16_t*) sBuffer; rawData < rawDataEnd;) {
+                *rawData = palette[*pngData];
+                ++rawData;
+                ++pngData;
+            }
+            break;
+        }
+
+        break;
+	}
     }
 
 cleanup:

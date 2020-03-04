@@ -1,4 +1,5 @@
 /*
+uPNG -- altered by @msokalski ( added missing image formats, replaced deffective infate with tinfl.c )
 uPNG -- derived from LodePNG version 20100808
 
 Copyright (c) 2005-2010 Lode Vandevenne
@@ -49,13 +50,24 @@ typedef enum upng_format {
 	UPNG_LUMINANCE2,
 	UPNG_LUMINANCE4,
 	UPNG_LUMINANCE8,
-	UPNG_LUMINANCE_ALPHA1,
-	UPNG_LUMINANCE_ALPHA2,
-	UPNG_LUMINANCE_ALPHA4,
-	UPNG_LUMINANCE_ALPHA8
+	UPNG_LUMINANCE16,
+	UPNG_LUMINANCE_ALPHA8,
+	UPNG_LUMINANCE_ALPHA16,
+	UPNG_INDEX1_RGB,
+	UPNG_INDEX2_RGB,
+	UPNG_INDEX4_RGB,
+	UPNG_INDEX8_RGB,
+	UPNG_INDEX1_RGBA,
+	UPNG_INDEX2_RGBA,
+	UPNG_INDEX4_RGBA,
+	UPNG_INDEX8_RGBA,
 } upng_format;
 
 typedef struct upng_t upng_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 upng_t*		upng_new_from_bytes	(const unsigned char* buffer, unsigned long size);
 upng_t*		upng_new_from_file	(const char* path);
@@ -77,5 +89,13 @@ upng_format	upng_get_format		(const upng_t* upng);
 
 const unsigned char*	upng_get_buffer		(const upng_t* upng);
 unsigned				upng_get_size		(const upng_t* upng);
+
+
+const unsigned char* upng_get_pal_buffer(const upng_t* upng);
+unsigned upng_get_pal_size(const upng_t* upng);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /*defined(UPNG_H)*/
